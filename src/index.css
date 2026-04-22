@@ -93,6 +93,49 @@ body {
   padding: 0 18px;
 }
 
+.favorite-panel {
+  padding: 0 18px 8px;
+}
+
+.favorite-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  opacity: 0.9;
+}
+
+.favorite-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.favorite-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(8, 47, 73, 0.4);
+  border: 1px solid rgba(224, 242, 254, 0.45);
+  overflow: hidden;
+}
+
+.favorite-chip-city,
+.favorite-chip-delete {
+  border: none;
+  background: transparent;
+  color: #f0f9ff;
+  cursor: pointer;
+}
+
+.favorite-chip-city {
+  padding: 6px 10px 6px 12px;
+}
+
+.favorite-chip-delete {
+  padding: 6px 10px 6px 8px;
+  border-left: 1px solid rgba(224, 242, 254, 0.35);
+}
+
 .loading {
   display: inline-flex;
   align-items: center;
@@ -181,14 +224,28 @@ body {
 }
 
 .delete-chip {
-  margin-top: auto;
-  align-self: flex-start;
   border: 1px solid rgba(254, 202, 202, 0.8);
   border-radius: 999px;
   background: rgba(127, 29, 29, 0.45);
   color: #fef2f2;
   padding: 6px 12px;
   cursor: pointer;
+}
+
+.collect-chip {
+  border: 1px solid rgba(254, 240, 138, 0.75);
+  border-radius: 999px;
+  background: rgba(161, 98, 7, 0.35);
+  color: #fefce8;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.city-actions {
+  margin-top: auto;
+  align-self: flex-start;
+  display: flex;
+  gap: 8px;
 }
 
 .dots {

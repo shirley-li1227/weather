@@ -13,7 +13,7 @@ type WeatherResponse = {
   };
   name: string;
   dt: number;
-  weather: Array<{ description: string }>;
+  weather: Array<{ description: string; icon: string }>;
   main: {
     temp: number;
     temp_min: number;
@@ -99,7 +99,7 @@ function formatDateLabel(dateKey: string): string {
 }
 
 function createCityId(query: WeatherQuery): string {
-  if ("city" in query) {
+  if ("city" in query && typeof query.city === "string") {
     return `city:${query.city.trim().toLowerCase()}`;
   }
   return `coord:${query.lat.toFixed(4)},${query.lon.toFixed(4)}`;
@@ -148,6 +148,7 @@ export default function App() {
   const [mouseStartX, setMouseStartX] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [cities, setCities] = useState<CityItem[]>([]);
+  const [favoriteCities, setFavoriteCities] = useState<string[]>([]);
   const [forecastByCity, setForecastByCity] = useState<Record<string, ForecastDay[]>>({});
   const [forecastLoading, setForecastLoading] = useState(false);
   const [forecastError, setForecastError] = useState("");
@@ -176,11 +177,10 @@ export default function App() {
         : [];
 
       if (initialCities.length > 0) {
-        setCities(initialCities);
-        void Promise.all(initialCities.map((item) => fetchCityWeather(item.id, item.query)));
+        setFavoriteCities(initialCities.map((item) => item.label));
       }
     } catch {
-      setCities([]);
+      setFavoriteCities([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -276,11 +276,39 @@ export default function App() {
     }
   };
 
-  const persistAddedCities = (nextCities: CityItem[]) => {
-    const cityNames = nextCities
-      .filter((item) => !item.isCurrentLocation && "city" in item.query)
-      .map((item) => item.label);
-    localStorage.setItem(SAVED_CITIES_KEY, JSON.stringify(cityNames));
+  const persistFavoriteCities = (nextFavorites: string[]) => {
+    localStorage.setItem(SAVED_CITIES_KEY, JSON.stringify(nextFavorites));
+  };
+
+  const addFavoriteCity = (cityName: string) => {
+    const normalized = cityName.trim();
+    if (!normalized) {
+      return;
+    }
+    setFavoriteCities((prev) => {
+      if (prev.some((item) => item.toLowerCase() === normalized.toLowerCase())) {
+        return prev;
+      }
+      const nextFavorites = [...prev, normalized];
+      persistFavoriteCities(nextFavorites);
+      return nextFavorites;
+    });
+  };
+
+  const removeFavoriteCity = (cityName: string) => {
+    setFavoriteCities((prev) => {
+      const nextFavorites = prev.filter((item) => item.toLowerCase() !== cityName.toLowerCase());
+      persistFavoriteCities(nextFavorites);
+      return nextFavorites;
+    });
+  };
+
+  const isFavoriteCity = (city?: CityItem) => {
+    if (!city || city.isCurrentLocation || !("city" in city.query)) {
+      return false;
+    }
+    const cityName = city.weather?.name ?? city.label;
+    return favoriteCities.some((item) => item.toLowerCase() === cityName.toLowerCase());
   };
 
   const locateCurrentCity = async () => {
@@ -356,7 +384,6 @@ export default function App() {
     const nextItem: CityItem = { id: cityId, label: trimmed, query, loading: true };
     const nextCities = [...cities, nextItem];
     setCities(nextCities);
-    persistAddedCities(nextCities);
     setCurrentIndex(nextCities.length - 1);
     setCityInput("");
     setShowAddForm(false);
@@ -367,7 +394,6 @@ export default function App() {
   const handleDeleteCity = (cityId: string) => {
     const nextCities = cities.filter((item) => item.id !== cityId);
     setCities(nextCities);
-    persistAddedCities(nextCities);
     setCurrentIndex((prev) => Math.max(0, Math.min(prev, nextCities.length - 1)));
     if (detailCityId === cityId) {
       setDetailCityId(null);
@@ -400,6 +426,34 @@ export default function App() {
     setMouseStartX(null);
   };
 
+  const handleQuickQueryFavorite = async (cityName: string) => {
+    const normalized = cityName.trim();
+    if (!normalized) {
+      return;
+    }
+    const existingIndex = cities.findIndex(
+      (item) =>
+        "city" in item.query &&
+        typeof item.query.city === "string" &&
+        item.query.city.toLowerCase() === normalized.toLowerCase(),
+    );
+    if (existingIndex >= 0) {
+      const city = cities[existingIndex];
+      setCurrentIndex(existingIndex);
+      await fetchCityWeather(city.id, city.query);
+      return;
+    }
+
+    const query: WeatherQuery = { city: normalized };
+    const cityId = createCityId(query);
+    const nextItem: CityItem = { id: cityId, label: normalized, query, loading: true };
+    setCities((prev) => {
+      setCurrentIndex(prev.length);
+      return [...prev, nextItem];
+    });
+    await fetchCityWeather(cityId, query);
+  };
+
   return (
     <main className="page">
       <section className={`phone-shell ${isDetailPage ? "detail-page-shell" : ""}`}>
@@ -428,6 +482,37 @@ export default function App() {
         )}
 
         {errorMessage && <p className="error global-error">{errorMessage}</p>}
+
+        <section className="favorite-panel">
+          <p className="favorite-title">收藏城市</p>
+          {favoriteCities.length === 0 ? (
+            <p className="hint">查询城市后可点击“收藏”以便快速查询</p>
+          ) : (
+            <div className="favorite-list">
+              {favoriteCities.map((cityName) => (
+                <div key={cityName} className="favorite-chip">
+                  <button
+                    type="button"
+                    className="favorite-chip-city"
+                    onClick={() => {
+                      void handleQuickQueryFavorite(cityName);
+                    }}
+                  >
+                    {cityName}
+                  </button>
+                  <button
+                    type="button"
+                    className="favorite-chip-delete"
+                    onClick={() => removeFavoriteCity(cityName)}
+                    aria-label={`删除收藏 ${cityName}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         <div
           className="carousel-wrap"
@@ -483,16 +568,32 @@ export default function App() {
                   </div>
                 )}
                 {!city.isCurrentLocation && (
-                  <button
-                    className="delete-chip"
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleDeleteCity(city.id);
-                    }}
-                  >
-                    删除城市
-                  </button>
+                  <div className="city-actions">
+                    <button
+                      className="collect-chip"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (isFavoriteCity(city)) {
+                          removeFavoriteCity(city.weather?.name ?? city.label);
+                          return;
+                        }
+                        addFavoriteCity(city.weather?.name ?? city.label);
+                      }}
+                    >
+                      {isFavoriteCity(city) ? "已收藏" : "收藏城市"}
+                    </button>
+                    <button
+                      className="delete-chip"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDeleteCity(city.id);
+                      }}
+                    >
+                      删除城市
+                    </button>
+                  </div>
                 )}
               </article>
             ))}
