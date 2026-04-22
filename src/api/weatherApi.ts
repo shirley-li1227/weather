@@ -1,7 +1,8 @@
 const DEFAULT_BASE_URL = "https://api.openweathermap.org/data/2.5";
 const API_BASE_URL =
   import.meta.env.VITE_OPENWEATHER_BASE_URL ?? DEFAULT_BASE_URL;
-const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
+const API_KEY = "0aaa2d9120bb60b23eab4d7c676ce4ae";
+let runtimeApiKey = API_KEY ?? "";
 
 type CityQuery = {
   city: string;
@@ -28,8 +29,9 @@ export class WeatherApiError extends Error {
 }
 
 function buildQueryParams(query: WeatherQuery): URLSearchParams {
+  const apiKey = runtimeApiKey.trim();
   const params = new URLSearchParams({
-    appid: API_KEY ?? "",
+    appid: apiKey,
     units: "metric",
   });
 
@@ -47,7 +49,7 @@ async function requestWeather<T>(
   endpoint: "weather" | "forecast",
   query: WeatherQuery,
 ): Promise<T> {
-  if (!API_KEY) {
+  if (!runtimeApiKey.trim()) {
     throw new WeatherApiError(
       "Missing OpenWeatherMap API key. Please set VITE_OPENWEATHER_API_KEY in your environment.",
     );
@@ -93,4 +95,12 @@ export async function getForecast<T = unknown>(
   query: WeatherQuery,
 ): Promise<T> {
   return requestWeather<T>("forecast", query);
+}
+
+export function setOpenWeatherApiKey(apiKey: string): void {
+  runtimeApiKey = apiKey.trim();
+}
+
+export function getOpenWeatherApiKey(): string {
+  return runtimeApiKey;
 }
