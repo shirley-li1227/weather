@@ -29,11 +29,19 @@
 - `src/App.tsx`：页面 UI、交互逻辑、状态管理（查询/定位/收藏/详情/轮播）
 - `src/api/weatherApi.ts`：天气 API 请求封装与错误处理
 - `src/index.css`：全局与页面样式
+- `src/vite-env.d.ts`：Vite 环境变量类型声明
 
-## API Key 使用说明
+## 环境变量
 
-在首次调用天气接口时，会弹窗提示输入 `OpenWeatherMap API Key`。
-输入后会在当前页面会话中复用；若取消或留空，将提示缺少 API Key 并停止请求。
+在项目根目录创建 `.env`（或 `.env.local`）：
+
+```bash
+VITE_OPENWEATHER_API_KEY=你的OpenWeatherMapKey
+# 可选，不填则使用默认地址
+VITE_OPENWEATHER_BASE_URL=https://api.openweathermap.org/data/2.5
+```
+
+> `VITE_OPENWEATHER_API_KEY` 为必填，否则应用会提示缺少 API Key。
 
 ## 本地开发
 
