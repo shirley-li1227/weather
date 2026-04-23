@@ -1,8 +1,6 @@
 const DEFAULT_BASE_URL = "https://api.openweathermap.org/data/2.5";
-const API_BASE_URL =
-  import.meta.env.VITE_OPENWEATHER_BASE_URL ?? DEFAULT_BASE_URL;
-const API_KEY = "0aaa2d9120bb60b23eab4d7c676ce4ae";
-let runtimeApiKey = API_KEY ?? "";
+const API_BASE_URL = DEFAULT_BASE_URL;
+let runtimeApiKey = "";
 
 type CityQuery = {
   city: string;
@@ -50,9 +48,18 @@ async function requestWeather<T>(
   query: WeatherQuery,
 ): Promise<T> {
   if (!runtimeApiKey.trim()) {
-    throw new WeatherApiError(
-      "Missing OpenWeatherMap API key. Please set VITE_OPENWEATHER_API_KEY in your environment.",
-    );
+    const inputApiKey =
+      typeof window !== "undefined" && typeof window.prompt === "function"
+        ? window.prompt("请输入 OpenWeatherMap API Key（https://openweathermap.org/api）")
+        : null;
+
+    if (!inputApiKey?.trim()) {
+      throw new WeatherApiError(
+        "Missing OpenWeatherMap API key. Please enter a valid API key.",
+      );
+    }
+
+    runtimeApiKey = inputApiKey.trim();
   }
 
   const params = buildQueryParams(query);
